@@ -1,41 +1,43 @@
 #!/usr/bin/env bash
 echo -e "\n-------set up dot net env-------"
 
-DOWNLOAD_X64=https://download.visualstudio.microsoft.com/download/pr/70fb6022-ef53-473b-bfde-dc8cd6b673ca/2c04303064ed5c5158998c3a0d11fcc1/dotnet-sdk-6.0.201-linux-musl-x64.tar.gz
-DOWNLOAD_ARM32=https://download.visualstudio.microsoft.com/download/pr/09df51a1-5ef7-4db6-90cd-302ae92b7c84/3d000f08ab919f43f61184a3c48b46a8/dotnet-sdk-6.0.201-linux-musl-arm.tar.gz
-DOWNLOAD_ARM64=https://download.visualstudio.microsoft.com/download/pr/0038906f-0d85-41ad-897d-2579359eeb77/78bb1d3b9df9d8017222f0bed5df23ab/dotnet-sdk-6.0.201-linux-musl-arm64.tar.gz
+## 安装dotnet
 
-get_download_url_by_machine_architecture() {
-    if command -v uname > /dev/null; then
-        CPUName=$(uname -m)
-        case $CPUName in
-        armv*l)
-            echo $DOWNLOAD_ARM32
-            return 0
-            ;;
-        aarch64|arm64)
-            echo $DOWNLOAD_ARM64
-            return 0
-            ;;
-        esac
-    fi
-    # Always default to 'x64'
-    echo $DOWNLOAD_X64
-    return 0
+# 安装依赖
+install_dependency() {
+    echo "安装依赖..."
+    apk add bash icu-libs krb5-libs libgcc libintl libssl1.1 libstdc++ zlib
 }
 
-DOWNLOAD_URL="$(get_download_url_by_machine_architecture)"
-DOTNET_FILE=dotnet-sdk.tar.gz
+# 通过官方脚本安装dotnet
+install_by_offical() {
+    echo "install by offical script..."
+    curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 6.0 --no-cdn --verbose
+}
 
-apk add bash icu-libs krb5-libs libgcc libintl libssl1.1 libstdc++ zlib
+# 创建软链接
+create_soft_link() {
+    # echo "创建软链接..."
+    # rm -f /usr/bin/dotnet
+    # ln -s ~/.dotnet/dotnet /usr/bin/dotnet
 
-wget -O $DOTNET_FILE $DOWNLOAD_URL
-DOTNET_ROOT=/home/dotnet
-mkdir -p "$DOTNET_ROOT" && tar zxf "$DOTNET_FILE" -C "$DOTNET_ROOT"
+    echo "添加PATH"
+    local exportFile="/root/.bashrc"
+    touch $exportFile
+    echo '' >> $exportFile
+    echo 'export DOTNET_ROOT=$HOME/.dotnet' >> $exportFile
+    echo 'export PATH=$PATH:$DOTNET_ROOT:$DOTNET_ROOT/tools' >> $exportFile
+    . $exportFile
+}
 
-export PATH=$PATH:$DOTNET_ROOT
-ln -s /home/dotnet/dotnet /usr/local/bin
+args=("$@")
 
-dotnet --version
+install_dependency
+
+install_by_offical
+
+create_soft_link
+
+dotnet --info
 
 echo -e "\n-------set up dot net env finish-------"
